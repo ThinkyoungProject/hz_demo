@@ -1,0 +1,346 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.goopal.mapper.TblUserTransactionMapper" >
+  <resultMap id="BaseResultMap" type="com.goopal.entity.TblUserTransaction" >
+    <id column="id" property="id" jdbcType="BIGINT" />
+    <result column="trx_from_address" property="trxFromAddress" jdbcType="VARCHAR" />
+    <result column="transfer_from_address" property="transferFromAddress" jdbcType="VARCHAR" />
+    <result column="transfer_to_address" property="transferToAddress" jdbcType="VARCHAR" />
+    <result column="trx_time" property="trxTime" jdbcType="TIMESTAMP" />
+    <result column="trx_id" property="trxId" jdbcType="VARCHAR" />
+    <result column="ext_trx_id" property="extTrxId" jdbcType="VARCHAR" />
+    <result column="block_id" property="blockId" jdbcType="VARCHAR" />
+    <result column="block_num" property="blockNum" jdbcType="INTEGER" />
+    <result column="block_trx_num" property="blockTrxNum" jdbcType="INTEGER" />
+    <result column="trx_type" property="trxType" jdbcType="TINYINT" />
+    <result column="trx_state" property="trxState" jdbcType="TINYINT" />
+    <result column="transfer_amount" property="transferAmount" jdbcType="DOUBLE" />
+    <result column="created_at" property="createdAt" jdbcType="TIMESTAMP" />
+    <result column="updated_at" property="updatedAt" jdbcType="TIMESTAMP" />
+    <result column="deleted_at" property="deletedAt" jdbcType="TIMESTAMP" />
+  </resultMap>
+  
+  <sql id="Base_Column_List" >
+    id, trx_from_address, transfer_from_address, transfer_to_address, trx_time, trx_id, 
+    ext_trx_id, block_id, block_num, block_trx_num, trx_type, trx_state, transfer_amount, 
+    created_at, updated_at, deleted_at
+  </sql>
+  
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.Long" >
+    select 
+    <include refid="Base_Column_List" />
+    from tbl_user_transaction
+    where id = #{id,jdbcType=BIGINT}
+  </select>
+  
+  <!-- 根据手机号码,订单确认状态查询用户参保记录 -->
+  <select id="selectByTrxStateByPhone" resultType="java.util.HashMap" parameterType="hashmap">
+  	SELECT b.phone_num AS phone,a.transfer_amount AS amount, a.trx_state AS state,a.trx_type AS type,b.address AS address,a.trx_time AS trxTime,
+    a.trx_from_address AS trxFromAddress,a.id AS id
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.trx_from_address = b.address
+	WHERE  b.phone_num = #{phone}
+	ORDER BY a.trx_type DESC
+  </select>
+  
+  <!-- 根据手机号码查询用户参保记录 -->
+  <select id="selectByTransferPhone" resultMap="BaseResultMap" parameterType="hashmap">
+  	SELECT 
+  	<include refid="Base_Column_List" />
+  	from tbl_user_info a LEFT JOIN tbl_user_transaction b 
+	on a.Address = b.Transfer_from_address
+	where b.Transfer_from_address is not null AND a.Phone_num=#{phone}
+  </select>
+  
+  <!-- 根据交易所在位置查询是否有较新的交易被确认 -->
+  <select id="selectBychainlocation" resultMap="BaseResultMap" parameterType="hashmap">
+  	SELECT 
+  	<include refid="Base_Column_List" />
+  	from tbl_user_transaction
+	where trx_state>= 1 and ( block_num >#{block_num} or (block_num = #{block_num} AND block_trx_num > #{block_trx_num}))
+  </select>
+  
+   <!-- 根据手机号码,参保状态查询交易记录 -->
+  <select id="selectByTypePhone" resultMap="BaseResultMap" parameterType="hashmap">
+  	SELECT 
+    b.phone_num AS phone,a.transfer_amount AS transferAmount, a.trx_state AS state,a.trx_type AS type,b.address AS address,a.trx_time AS trxTime,
+    a.trx_from_address AS trxFromAddress
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.trx_from_address = b.address
+	WHERE a.trx_type = 0  AND b.phone_num = #{phone}
+	ORDER BY a.trx_type DESC
+  </select>
+  
+  <!-- 查询爱心名单数据,交易状态位已经确认的 -->
+  <select id="selectByTrxState" resultType="hashmap"> 
+    SELECT 
+    b.phone_num AS phone,a.transfer_amount AS amount, a.trx_state AS state,a.trx_type AS type,b.address AS address,a.trx_time AS trxTime,
+    a.trx_from_address AS trxFromAddress
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.trx_from_address = b.address
+	WHERE a.trx_type = 0 
+	ORDER BY a.trx_type DESC,a.trx_time DESC
+  </select>
+  
+   <!-- 查询审核数据,交易状态位是用户自己申请赔偿 -->
+  <select id="selectByExamine" resultType="hashmap"> 
+    SELECT 
+    b.phone_num AS phone,a.transfer_amount AS amount, a.trx_state AS state,a.trx_type AS type,b.address AS address,a.trx_time AS trxTime,
+    a.trx_from_address AS trxFromAddress
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.trx_from_address = b.address
+	WHERE a.trx_type = 0 AND a.trx_state = 2
+	ORDER BY a.trx_type DESC,a.trx_time DESC
+  </select>
+  
+  <!-- 查询所有的交易赔付信息 -->
+  <select id="selectAllTrance" resultType="hashmap">
+  	SELECT b.phone_num AS phone,a.transfer_amount AS amount, a.trx_state AS state,a.trx_type AS type
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.transfer_to_address = b.address
+	WHERE a.trx_type = 1 AND a.trx_state = 1
+	ORDER BY a.trx_type DESC,a.trx_time DESC
+  </select>
+  
+  <!-- 根据手机号码查询赔付信息 -->
+  <select id="selectBytranToPhone" resultType="hashmap" parameterType="java.lang.String">
+  	SELECT b.phone_num AS phone,a.trx_id AS trxId,b.address AS address,a.trx_time AS trxTime,a.transfer_amount AS amount
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.transfer_to_address = b.address
+	WHERE a.trx_type = 1 AND a.trx_state = 1 AND b.phone_num = #{phone}
+	ORDER BY a.trx_type DESC
+  </select>
+  
+  <!-- 统计赔付金额,陪人人数 -->
+  <select id="selectNumTrans" resultType="hashmap">
+  	SELECT IFNULL(sum(a.transfer_amount),0) AS amount,COUNT(a.id) AS num
+	FROM tbl_user_transaction a left join tbl_user_info b on a.transfer_to_address=b.address
+	WHERE a.trx_type = 1 AND a.trx_state = 1
+  </select>
+  
+  
+  <!-- 查询参保数据,用户状态是未确认 -->
+  <select id="selectByInsured" resultMap="BaseResultMap">
+  	SELECT 
+  	<include refid="Base_Column_List" />
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.transfer_to_address = b.address
+	WHERE a.trx_type = 0 AND a.trx_state = 0
+	ORDER BY a.trx_type DESC
+  </select>
+  
+  <!-- 查询赔付数据,用户状态是未确认 -->
+  <select id="selectByPayment" resultMap="BaseResultMap">
+  	SELECT 
+  	<include refid="Base_Column_List" />
+	FROM tbl_user_transaction a LEFT JOIN tbl_user_info b on a.transfer_to_address = b.address
+	WHERE a.trx_type = 1 AND a.trx_state = 0
+	ORDER BY a.trx_type DESC
+  </select>
+  
+  
+  <!-- 根据Id更新trxState状态 -->
+  <update id="updateByTrxState" parameterType="hashmap">
+  	UPDATE tbl_user_transaction a  SET a.trx_state = '2'
+	WHERE a.id = #{id}
+  </update>
+  
+  <!-- 根据Id更新trxState状态 -->
+  <update id="updateByFromAddress" parameterType="java.lang.String">
+  	UPDATE tbl_user_transaction a  SET a.trx_state = '3'
+	WHERE a.trx_from_address = #{address} AND a.trx_type = 0
+  </update>
+  
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.Long" >
+    delete from tbl_user_transaction
+    where id = #{id,jdbcType=BIGINT}
+  </delete>
+  
+ <insert id="insert" parameterType="com.goopal.entity.TblUserTransaction" >
+    insert into tbl_user_transaction (id, trx_from_address, transfer_from_address, 
+      transfer_to_address, trx_time, trx_id, 
+      ext_trx_id, block_id, block_num, 
+      block_trx_num, trx_type, trx_state, 
+      transfer_amount, created_at, updated_at, 
+      deleted_at)
+    values (#{id,jdbcType=BIGINT}, #{trxFromAddress,jdbcType=VARCHAR}, #{transferFromAddress,jdbcType=VARCHAR}, 
+      #{transferToAddress,jdbcType=VARCHAR}, #{trxTime,jdbcType=TIMESTAMP}, #{trxId,jdbcType=VARCHAR}, 
+      #{extTrxId,jdbcType=VARCHAR}, #{blockId,jdbcType=VARCHAR}, #{blockNum,jdbcType=INTEGER}, 
+      #{blockTrxNum,jdbcType=INTEGER}, #{trxType,jdbcType=TINYINT}, #{trxState,jdbcType=TINYINT}, 
+      #{transferAmount,jdbcType=DOUBLE}, #{createdAt,jdbcType=TIMESTAMP}, #{updatedAt,jdbcType=TIMESTAMP}, 
+      #{deletedAt,jdbcType=TIMESTAMP})
+  </insert>
+  
+  <insert id="insertSelective" parameterType="com.goopal.entity.TblUserTransaction" >
+    insert into tbl_user_transaction
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        id,
+      </if>
+      <if test="trxFromAddress != null" >
+        trx_from_address,
+      </if>
+      <if test="transferFromAddress != null" >
+        transfer_from_address,
+      </if>
+      <if test="transferToAddress != null" >
+        transfer_to_address,
+      </if>
+      <if test="trxTime != null" >
+        trx_time,
+      </if>
+      <if test="trxId != null" >
+        trx_id,
+      </if>
+      <if test="extTrxId != null" >
+        ext_trx_id,
+      </if>
+      <if test="blockId != null" >
+        block_id,
+      </if>
+      <if test="blockNum != null" >
+        block_num,
+      </if>
+      <if test="blockTrxNum != null" >
+        block_trx_num,
+      </if>
+      <if test="trxType != null" >
+        trx_type,
+      </if>
+      <if test="trxState != null" >
+        trx_state,
+      </if>
+      <if test="transferAmount != null" >
+        transfer_amount,
+      </if>
+      <if test="createdAt != null" >
+        created_at,
+      </if>
+      <if test="updatedAt != null" >
+        updated_at,
+      </if>
+      <if test="deletedAt != null" >
+        deleted_at,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="id != null" >
+        #{id,jdbcType=BIGINT},
+      </if>
+      <if test="trxFromAddress != null" >
+        #{trxFromAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="transferFromAddress != null" >
+        #{transferFromAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="transferToAddress != null" >
+        #{transferToAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="trxTime != null" >
+        #{trxTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="trxId != null" >
+        #{trxId,jdbcType=VARCHAR},
+      </if>
+      <if test="extTrxId != null" >
+        #{extTrxId,jdbcType=VARCHAR},
+      </if>
+      <if test="blockId != null" >
+        #{blockId,jdbcType=VARCHAR},
+      </if>
+      <if test="blockNum != null" >
+        #{blockNum,jdbcType=INTEGER},
+      </if>
+      <if test="blockTrxNum != null" >
+        #{blockTrxNum,jdbcType=INTEGER},
+      </if>
+      <if test="trxType != null" >
+        #{trxType,jdbcType=TINYINT},
+      </if>
+      <if test="trxState != null" >
+        #{trxState,jdbcType=TINYINT},
+      </if>
+      <if test="transferAmount != null" >
+        #{transferAmount,jdbcType=DOUBLE},
+      </if>
+      <if test="createdAt != null" >
+        #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null" >
+        #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deletedAt != null" >
+        #{deletedAt,jdbcType=TIMESTAMP},
+      </if>
+    </trim>
+  </insert>
+  
+  <update id="updateByPrimaryKeySelective" parameterType="com.goopal.entity.TblUserTransaction" >
+    update tbl_user_transaction
+    <set >
+      <if test="trxFromAddress != null" >
+        Trx_from_address = #{trxFromAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="transferFromAddress != null" >
+        Transfer_from_address = #{transferFromAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="transferToAddress != null" >
+        Transfer_to_address = #{transferToAddress,jdbcType=VARCHAR},
+      </if>
+      <if test="trxTime != null" >
+        Trx_time = #{trxTime,jdbcType=TIMESTAMP},
+      </if>
+      <if test="trxId != null" >
+        Trx_id = #{trxId,jdbcType=VARCHAR},
+      </if>
+      <if test="extTrxId != null" >
+        Ext_trx_id = #{extTrxId,jdbcType=VARCHAR},
+      </if>
+      <if test="blockId != null" >
+        Block_id = #{blockId,jdbcType=VARCHAR},
+      </if>
+      <if test="blockNum != null" >
+        Block_num = #{blockNum,jdbcType=VARCHAR},
+      </if>
+      <if test="blockTrxNum != null" >
+        Block_trx_num = #{blockTrxNum,jdbcType=VARCHAR},
+      </if>
+      <if test="trxType != null" >
+        Trx_type = #{trxType,jdbcType=CHAR},
+      </if>
+      <if test="trxState != null" >
+        Trx_state = #{trxState,jdbcType=CHAR},
+      </if>
+      <if test="transferAmount != null" >
+        Transfer_amount = #{transferAmount,jdbcType=DECIMAL},
+      </if>
+      <if test="createdAt != null" >
+        created_at = #{createdAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="updatedAt != null" >
+        updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      </if>
+      <if test="deletedAt != null" >
+        deleted_at = #{deletedAt,jdbcType=TIMESTAMP},
+      </if>
+    </set>
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  
+  <update id="updateByPrimaryKey" parameterType="com.goopal.entity.TblUserTransaction" >
+    update tbl_user_transaction
+    set Trx_from_address = #{trxFromAddress,jdbcType=VARCHAR},
+      Transfer_from_address = #{transferFromAddress,jdbcType=VARCHAR},
+      Transfer_to_address = #{transferToAddress,jdbcType=VARCHAR},
+      Trx_time = #{trxTime,jdbcType=TIMESTAMP},
+      Trx_id = #{trxId,jdbcType=VARCHAR},
+      Ext_trx_id = #{extTrxId,jdbcType=VARCHAR},
+      Block_id = #{blockId,jdbcType=VARCHAR},
+      Block_num = #{blockNum,jdbcType=VARCHAR},
+      Block_trx_num = #{blockTrxNum,jdbcType=VARCHAR},
+      Trx_type = #{trxType,jdbcType=CHAR},
+      Trx_state = #{trxState,jdbcType=CHAR},
+      Transfer_amount = #{transferAmount,jdbcType=DECIMAL},
+      created_at = #{createdAt,jdbcType=TIMESTAMP},
+      updated_at = #{updatedAt,jdbcType=TIMESTAMP},
+      deleted_at = #{deletedAt,jdbcType=TIMESTAMP}
+    where id = #{id,jdbcType=BIGINT}
+  </update>
+  <!-- 清理所有交易记录 -->
+  <delete id="deleteAllTransaction"  >
+    delete from tbl_user_Transaction
+  </delete>
+</mapper>

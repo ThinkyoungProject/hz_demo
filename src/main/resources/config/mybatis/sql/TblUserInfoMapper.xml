@@ -1,0 +1,176 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.goopal.mapper.TblUserInfoMapper" >
+  <resultMap id="BaseResultMap" type="com.goopal.entity.TblUserInfo" >
+    <id column="address" property="address" jdbcType="VARCHAR" />
+    <result column="private_key" property="privateKey" jdbcType="VARCHAR" />
+    <result column="phone_num" property="phoneNum" jdbcType="VARCHAR" />
+    <result column="balance" property="balance" jdbcType="DOUBLE" />
+    <result column="state" property="state" jdbcType="TINYINT" />
+  </resultMap>
+  
+  <sql id="Base_Column_List" >
+    Address, Private_key, Phone_num, Balance, state
+  </sql>
+  
+  <select id="selectByPrimaryKey" resultMap="BaseResultMap" parameterType="java.lang.String" >
+    select 
+    <include refid="Base_Column_List" />
+    from tbl_user_info
+    where Address = #{address,jdbcType=VARCHAR}
+  </select>
+  
+  <!-- 查询没有使的区块信息 -->
+  <select id="selectByStatus" resultMap="BaseResultMap">
+  	select 
+    <include refid="Base_Column_List" />
+    from tbl_user_info
+    where Phone_num is null AND state = 0 limit 1
+  </select>
+  
+  <!-- 初次加载数据 -->
+  <select id="selectFirstData" resultMap="BaseResultMap">
+  	select 
+    <include refid="Base_Column_List" />
+    from tbl_user_info
+    where Phone_num is null AND state = 0 limit 100
+  </select>
+  
+  
+  
+  
+  <!-- 根据手机号查询用户信息 -->
+  <select id="selectByPhone" resultMap="BaseResultMap" parameterType="com.goopal.entity.TblUserInfo">
+  	select 
+    <include refid="Base_Column_List" />
+    from tbl_user_info
+    where Phone_num = #{phoneNum} AND state = 1
+  </select>
+  
+  <!-- 查询合约审核人信息 -->
+  <select id="selectNoState" resultMap="BaseResultMap" parameterType="java.lang.String">
+  	select 
+    <include refid="Base_Column_List" />
+    from tbl_user_info
+    where Phone_num = #{phoneNum} AND state = 2
+  </select>
+  
+   <!-- 根据手机号查询用户信息 -->
+  <select id="queryByPhone" resultMap="BaseResultMap" parameterType="java.lang.String">
+  	select 
+    <include refid="Base_Column_List" />
+    from tbl_user_info
+    where Phone_num = #{phoneNum} AND state = 1
+  </select>
+  
+  <!-- 统计参与的人数 -->
+  <select id="selectCountUser" resultType="java.lang.Integer">
+  	SELECT COUNT(a.id) AS num
+	from tbl_user_transaction a LEFT JOIN tbl_user_info b on a.trx_from_address = b.address
+	where b.state=1  
+  </select>
+  
+  <update id="updateByPrivate" parameterType="com.goopal.entity.TblUserInfo" >
+    update tbl_user_info
+    <set >
+      <if test="privateKey != null" >
+        Private_key = #{privateKey,jdbcType=VARCHAR},
+      </if>
+      <if test="phoneNum != null" >
+        Phone_num = #{phoneNum,jdbcType=VARCHAR},
+      </if>
+      <if test="balance != null" >
+        Balance = #{balance,jdbcType=DOUBLE},
+      </if>
+      <if test="state != null" >
+        state = #{state,jdbcType=TINYINT},
+      </if>
+    </set>
+    where Private_key = #{privateKey,jdbcType=VARCHAR}
+  </update>
+  
+  <delete id="deleteByPrimaryKey" parameterType="java.lang.String" >
+    delete from tbl_user_info
+    where Address = #{address,jdbcType=VARCHAR}
+  </delete>
+    
+ <insert id="insert" parameterType="com.goopal.entity.TblUserInfo" >
+    insert into tbl_user_info (address, private_key, phone_num, 
+      balance, state)
+    values (#{address,jdbcType=VARCHAR}, #{privateKey,jdbcType=VARCHAR}, #{phoneNum,jdbcType=VARCHAR}, 
+      #{balance,jdbcType=DOUBLE}, #{state,jdbcType=TINYINT})
+  </insert>
+  
+  <insert id="insertSelective" parameterType="com.goopal.entity.TblUserInfo" >
+    insert into tbl_user_info
+    <trim prefix="(" suffix=")" suffixOverrides="," >
+      <if test="address != null" >
+        address,
+      </if>
+      <if test="privateKey != null" >
+        private_key,
+      </if>
+      <if test="phoneNum != null" >
+        phone_num,
+      </if>
+      <if test="balance != null" >
+        balance,
+      </if>
+      <if test="state != null" >
+        state,
+      </if>
+    </trim>
+    <trim prefix="values (" suffix=")" suffixOverrides="," >
+      <if test="address != null" >
+        #{address,jdbcType=VARCHAR},
+      </if>
+      <if test="privateKey != null" >
+        #{privateKey,jdbcType=VARCHAR},
+      </if>
+      <if test="phoneNum != null" >
+        #{phoneNum,jdbcType=VARCHAR},
+      </if>
+      <if test="balance != null" >
+        #{balance,jdbcType=DOUBLE},
+      </if>
+      <if test="state != null" >
+        #{state,jdbcType=TINYINT},
+      </if>
+    </trim>
+  </insert>
+  
+  <update id="updateByPrimaryKeySelective" parameterType="com.goopal.entity.TblUserInfo" >
+    update tbl_user_info
+    <set >
+      <if test="privateKey != null" >
+        Private_key = #{privateKey,jdbcType=VARCHAR},
+      </if>
+      <if test="phoneNum != null" >
+        Phone_num = #{phoneNum,jdbcType=VARCHAR},
+      </if>
+      <if test="balance != null" >
+        Balance = #{balance,jdbcType=DECIMAL},
+      </if>
+      <if test="state != null" >
+        state = #{state,jdbcType=TINYINT},
+      </if>
+    </set>
+    where Address = #{address,jdbcType=VARCHAR}
+  </update>
+  <update id="updateByPrimaryKey" parameterType="com.goopal.entity.TblUserInfo" >
+    update tbl_user_info
+    set Private_key = #{privateKey,jdbcType=VARCHAR},
+      Phone_num = #{phoneNum,jdbcType=VARCHAR},
+      Balance = #{balance,jdbcType=DECIMAL},
+      state = #{state,jdbcType=TINYINT}
+    where Address = #{address,jdbcType=VARCHAR}
+  </update>
+  <!-- 清空用户表 -->
+  <update id="clearUserInfo" parameterType="java.lang.String" >
+    update tbl_user_info
+    set Phone_num = null,
+      Balance = 0,
+      state = 0
+    where phone_num != #{phone_num,jdbcType=VARCHAR}
+  </update>
+</mapper>
